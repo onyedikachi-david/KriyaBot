@@ -32,7 +32,7 @@ jobs:
         push: true
         tags: |
           ${{ secrets.DOCKER_USERNAME }}/${{ env.REPO_NAME_LOWER }}
-          ${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}:${{ github.ref_name }}
+          ${{ secrets.DOCKER_USERNAME }}/${{ env.REPO_NAME_LOWER }}:${{ github.ref_name }}
 
     - name: Create Release
       uses: "marvinpinto/action-automatic-releases@latest"
