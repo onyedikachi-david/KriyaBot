@@ -1,1 +1,1 @@
-declare module 'xhr-shim';
+declare module "xhr-shim";
