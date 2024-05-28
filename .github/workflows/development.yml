@@ -2,22 +2,22 @@ name: Development build
 
 on:
   pull_request:
-    types: 
+    types:
     - synchronize
     - opened
   push:
     branches:
     - nightly
     - main
-
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
 
+    - name: Set lowercase repo name
+      run: echo "REPO_NAME_LOWER=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag ${{github.event.repository.name}}:$(date +%s)
+      run: docker build . --file Dockerfile --tag ${{ env.REPO_NAME_LOWER }}:$(date +%s)
