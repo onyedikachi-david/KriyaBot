@@ -9,7 +9,13 @@
  * @license: MIT License
  *
  */
-
+export enum WalletStatus {
+	None = "none",
+	Active = "active",
+	Inactive = "inactive",
+	Pending = "pending",
+	PendingCreation = "pending_creation",
+}
 /**
  * Telegram User Interface
  * =====================
@@ -76,4 +82,7 @@ export interface TelegramUserInterface {
 	 *
 	 */
 	language_code?: string;
+	is_2fa_active?: boolean;
+	wallet_status?: WalletStatus;
+	wallet_address?: string;
 }

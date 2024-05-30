@@ -21,7 +21,8 @@
 			"@databases/*": ["./database/*"],
 			"@translations/*": ["./app/translations/*"],
 			"@configs/*": ["./app/configs/*"],
-			"@app/*": ["./app/*"]
+			"@app/*": ["./app/*"],
+			"@wallet/*": ["./wallet/*"]
 		},
 		"typeRoots": ["app/**/types", "node_modules/@types"],
 		"plugins": [
