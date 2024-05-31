@@ -76,5 +76,6 @@
 		"mode": "Class",
 		"types": "Typescript",
 		"ISSUE_TEMPLATE": "Template"
-	}
+	},
+	"typescript.tsdk": "node_modules/typescript/lib"
 }

@@ -1,0 +1,31 @@
+# https://api.zettablock.com/api/v1/dataset/sq_1c0d4b475ccc479bbd5bd1a41be1bc15/graphql
+query {
+	records {
+		type
+		block_time
+		package_id
+	}
+}
+
+# https://api.zettablock.com/api/v1/dataset/sq_54b8c801cc474ee1817176d2d73f0ffb/graphql
+# Welcome to GraphiQL
+query suiCoins {
+	records {
+		name
+		package_id
+		object_id
+		symbol
+		coin_type
+	}
+}
+
+# https://api.zettablock.com/api/v1/dataset/sq_96dd18a38e394b43b5ca5ddfe009c396/graphql
+query pools {
+	record {
+		package_id
+		token_x_symbol
+		token_x_name
+		token_y_symbol
+		token_y_name
+	}
+}

@@ -1,9 +1,9 @@
 {
-	"package_name": "node-telegram-bot-boilerplate",
+	"package_name": "kriya-bot",
 	"package_org": "@ptkdev",
-	"display_name": "Node Telegram BOT Boilerplate",
-	"description": "Create your telegram bot with this friendly boilerplate. Use this repository as template for your bot",
-	"author": "Patryk Rzucidło [@ptkdev] <support@ptkdev.io> (https://ptk.dev)",
+	"display_name": "Kriya finance telegram bot.",
+	"description": "A telegram bot that allows you to manage your Kriya finance portfolio.",
+	"author": "David Anyatonwu [@ptkdev] <support@ptkdev.io> (https://ptk.dev)",
 	"author_markdown": "[Patryk Rzucidło](https://ptk.dev) ([@PTKDev](https://twitter.com/ptkdev)) <[support@ptkdev.io](mailto:support@ptkdev.io)>",
 	"author_url": "https://ptk.dev",
 	"github_nickname": "ptkdev",

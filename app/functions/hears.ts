@@ -67,17 +67,22 @@ const setupMainMenu = async (): Promise<void> => {
 
 const setUpCatch2FA = async (): Promise<void> => {
 	bot.hears(/^\d{6}$/, async (ctx) => {
-		console.log(ctx.current_action, ctx.secret);
+		// @ts-ignore
+		console.log(ctx.session.current_action, ctx.session.secret);
 
-		if (ctx.current_action !== "wallet_creation" && !ctx.secret) {
+		// @ts-ignore
+		if (ctx.session.current_action !== "wallet_creation" && !ctx.session.secret) {
 			return ctx.reply("Sorry, I can't do it, something got wrong");
 		}
 
 		// const user = await users.findById(ctx.from?.id!);
-		const secret = ctx.secret;
+		// @ts-ignore
+		const secret = ctx.session.secret;
 		if (!secret) {
 			return ctx.reply("Sorry, secret not found");
 		}
+		// @ts-ignore
+		// ctx.session.secret = undefined;
 		const isValid = authenticator.check(ctx.message?.text, secret);
 
 		if (isValid) {

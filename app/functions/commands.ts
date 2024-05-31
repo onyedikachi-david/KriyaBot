@@ -3,6 +3,8 @@ import { wordlist } from "@scure/bip39/wordlists/english";
 import { generateMnemonic } from "@scure/bip39";
 // import { derivationHdPath } from "./../../core/src/crypto";
 import { derivationHdPath } from "@wallet/crypto";
+// import { TEMP_POOL_DATA } from "@app/constants/pools";
+
 /**
  * Telegraf Commands
  * =====================
@@ -21,6 +23,7 @@ import { WalletStatus } from "@app/types/databases.type";
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
 import { Markup } from "telegraf";
+import { TEMP_POOL_DATA } from "@app/constants/pool";
 
 /**
  * command: /quit
@@ -32,6 +35,48 @@ const quit = async (): Promise<void> => {
 	bot.command("quit", (ctx) => {
 		ctx.telegram.leaveChat(ctx.message.chat.id);
 		ctx.leaveChat();
+	});
+};
+
+
+let headersList = {
+ "Accept": "*/*",
+ "User-Agent": "Thunder Client (https://www.thunderclient.com)",
+ "X-API-KEY": "228ef114-329e-477f-93ff-b1c8bb320c1b",
+ "Content-Type": "application/json"
+}
+
+let gqlBody = {
+  query: `query suiCoins{
+  records {
+    name
+    package_id
+    object_id
+    symbol
+    coin_type
+  }
+}`,
+  variables: "{}"
+}
+
+async function getCoins() {
+	let bodyContent =  JSON.stringify(gqlBody);
+
+	let response = await fetch("https://api.zettablock.com/api/v1/dataset/sq_54b8c801cc474ee1817176d2d73f0ffb/graphql", {
+	  method: "POST",
+	  body: bodyContent,
+	  headers: headersList
+	});
+
+	let data = await response.text();
+	return data
+}
+// console.log(data);
+
+const generatePoolButtons = () => {
+	return Object.keys(TEMP_POOL_DATA).map((poolId) => {
+		const pool = TEMP_POOL_DATA[poolId];
+		return Markup.button.callback(`${pool.baseToken} Pool`, `select_pool:${pool.id}`);
 	});
 };
 
@@ -53,6 +98,7 @@ async function generateWallet() {
 	const mnemonic = generateMnemonic(wordlist);
 	const vault = await Vault.fromMnemonic(derivationHdPath(0), mnemonic);
 	const address = vault.getAddress();
+	const pk = vault.getPrivateKey();
 	return address;
 }
 
@@ -98,8 +144,13 @@ const wallet = async (): Promise<void> => {
 			const qrcode = await QRCode.toDataURL(otpauth);
 			// set session to wallet_creation and the secret to session also
 			ctx.current_action = "wallet_creation";
+			// @ts-ignore
+			ctx.session.current_action = "wallet_creation";
 			ctx.secret = secret;
+			// @ts-ignore
+			ctx.session.secret = secret;
 			console.log(ctx.current_action, ctx.secret);
+			// ctx.sess
 
 			return ctx.replyWithPhoto(
 				{ source: Buffer.from(qrcode.substring(22), "base64") },
@@ -118,6 +169,10 @@ const wallet = async (): Promise<void> => {
 	});
 };
 
+// const getSigner = (pk: string) => {
+// 	return Ed25519Keypair.fromSecretKey(base64ToUint8Array(pk));
+// };
+
 const portfolio = async (): Promise<void> => {
 	bot.command("portfolio", (ctx) => {
 		// Logic for displaying portfolio
@@ -125,8 +180,39 @@ const portfolio = async (): Promise<void> => {
 };
 
 const swap = async (): Promise<void> => {
-	bot.command("swap", (ctx) => {
-		// Logic for swapping tokens
+	bot.command("swap", async (ctx) => {
+		const poolButtons = generatePoolButtons();
+		await ctx.reply("Select a pool to swap from:", Markup.inlineKeyboard(poolButtons, { columns: 2 }));
+	});
+
+	bot.action(/^select_pool:(.+)$/, async (ctx) => {
+		const id = ctx.match[1];
+		let poolId;
+		Object.keys(TEMP_POOL_DATA).forEach((key) => {
+			if (TEMP_POOL_DATA[key].id === id) {
+				poolId = key;
+			}
+		});
+		if (!poolId) {
+			return await ctx.reply("Pool not found.");
+		}
+		const pool: Record<
+			string,
+			{
+				id: string;
+				upsaclingFactor: number;
+				baseToken: string;
+				amountUpscalingFactor: number;
+				tickSize: number;
+				minAmount: number;
+				lotSize: number;
+			}
+		> = TEMP_POOL_DATA[poolId];
+		// @ts-ignore
+		ctx.session.poolId = poolId;
+		// Get coin list
+		const coinList = await getCoins();
+		return await ctx.reply(`Pool selected: ${pool.baseToken} Pool. Now select a token to swap from.`, Markup.inlineKeyboard([Markup.button.callback("Back", "back")])
 	});
 };
 
