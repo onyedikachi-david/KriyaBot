@@ -1,3 +1,4 @@
+# used as a webhook to notify the users of new pools
 # https://api.zettablock.com/api/v1/dataset/sq_1c0d4b475ccc479bbd5bd1a41be1bc15/graphql
 query {
 	records {

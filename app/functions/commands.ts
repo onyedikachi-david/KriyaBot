@@ -4,6 +4,7 @@ import { generateMnemonic } from "@scure/bip39";
 // import { derivationHdPath } from "./../../core/src/crypto";
 import { derivationHdPath } from "@wallet/crypto";
 // import { TEMP_POOL_DATA } from "@app/constants/pools";
+import { computeZkLoginAddressFromSeed } from "@mysten/sui/zklogin";
 
 /**
  * Telegraf Commands
@@ -24,6 +25,10 @@ import { authenticator } from "otplib";
 import QRCode from "qrcode";
 import { Markup } from "telegraf";
 import { TEMP_POOL_DATA } from "@app/constants/pool";
+import { v4 as uuidv4 } from "uuid";
+import { TransactionBlock } from "@mysten/sui.js";
+import { Dex } from "kriya-dex-sdk";
+require("isomorphic-fetch");
 
 /**
  * command: /quit
@@ -38,45 +43,47 @@ const quit = async (): Promise<void> => {
 	});
 };
 
-
-let headersList = {
- "Accept": "*/*",
- "User-Agent": "Thunder Client (https://www.thunderclient.com)",
- "X-API-KEY": "228ef114-329e-477f-93ff-b1c8bb320c1b",
- "Content-Type": "application/json"
+async function fetchData() {
+	try {
+		const response = await fetch(
+			"https://api.zettablock.com/api/v1/dataset/sq_96dd18a38e394b43b5ca5ddfe009c396/graphql",
+			{
+				method: "POST",
+				headers: {
+					Accept: "*/*",
+					"User-Agent": "Thunder Client (https://www.thunderclient.com)",
+					"X-API-KEY": "228ef114-329e-477f-93ff-b1c8bb320c1b",
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					query: `
+          query pools {
+            records {
+              package_id
+              token_x_symbol
+              token_x_name
+              token_y_symbol
+              token_y_name
+            }
+          }`,
+				}),
+			},
+		);
+		const result = await response.json();
+		return result.data.records;
+	} catch (error) {
+		console.error("Error fetching data:", error);
+	}
 }
 
-let gqlBody = {
-  query: `query suiCoins{
-  records {
-    name
-    package_id
-    object_id
-    symbol
-    coin_type
-  }
-}`,
-  variables: "{}"
-}
-
-async function getCoins() {
-	let bodyContent =  JSON.stringify(gqlBody);
-
-	let response = await fetch("https://api.zettablock.com/api/v1/dataset/sq_54b8c801cc474ee1817176d2d73f0ffb/graphql", {
-	  method: "POST",
-	  body: bodyContent,
-	  headers: headersList
-	});
-
-	let data = await response.text();
-	return data
-}
-// console.log(data);
-
-const generatePoolButtons = () => {
-	return Object.keys(TEMP_POOL_DATA).map((poolId) => {
-		const pool = TEMP_POOL_DATA[poolId];
-		return Markup.button.callback(`${pool.baseToken} Pool`, `select_pool:${pool.id}`);
+const poolStore = {};
+const generatePoolButtons = async () => {
+	const pools = await fetchData();
+	return pools.map((pool, index) => {
+		const poolKey = uuidv4(); // Generate a unique key for each pool
+		poolStore[poolKey] = pool; // Store the pool data in the in-memory store
+		const label = `${pool.token_x_symbol || "Unknown"} - ${pool.token_y_symbol || "Unknown"}`;
+		return Markup.button.callback(label, `select_pool:${poolKey}`);
 	});
 };
 
@@ -181,38 +188,114 @@ const portfolio = async (): Promise<void> => {
 
 const swap = async (): Promise<void> => {
 	bot.command("swap", async (ctx) => {
-		const poolButtons = generatePoolButtons();
+		const poolButtons = await generatePoolButtons();
 		await ctx.reply("Select a pool to swap from:", Markup.inlineKeyboard(poolButtons, { columns: 2 }));
 	});
 
 	bot.action(/^select_pool:(.+)$/, async (ctx) => {
-		const id = ctx.match[1];
-		let poolId;
-		Object.keys(TEMP_POOL_DATA).forEach((key) => {
-			if (TEMP_POOL_DATA[key].id === id) {
-				poolId = key;
-			}
-		});
-		if (!poolId) {
-			return await ctx.reply("Pool not found.");
-		}
-		const pool: Record<
-			string,
-			{
-				id: string;
-				upsaclingFactor: number;
-				baseToken: string;
-				amountUpscalingFactor: number;
-				tickSize: number;
-				minAmount: number;
-				lotSize: number;
-			}
-		> = TEMP_POOL_DATA[poolId];
+		const poolKey = ctx.match[1];
+		const pool = poolStore[poolKey]; // Retrieve the pool data using the shortened key
+		ctx.session.pool = {
+			objectId: pool.package_id,
+			tokenXType: pool.token_x_symbol,
+			tokenYType: pool.token_y_symbol,
+		};
+		ctx.session.poolKey = poolKey;
+		await ctx.reply(
+			`Pool selected: ${pool.token_x_symbol || "Unknown"} - ${
+				pool.token_y_symbol || "Unknown"
+			}. Now, please enter the token type ('tokenX' or 'tokenY'):`,
+		);
+	});
+
+	bot.hears(/^(tokenX|tokenY)$/, async (ctx) => {
 		// @ts-ignore
-		ctx.session.poolId = poolId;
-		// Get coin list
-		const coinList = await getCoins();
-		return await ctx.reply(`Pool selected: ${pool.baseToken} Pool. Now select a token to swap from.`, Markup.inlineKeyboard([Markup.button.callback("Back", "back")])
+		if (!ctx.session.pool) {
+			return ctx.reply("Please select a pool first.");
+		}
+		// @ts-ignore
+		ctx.session.inputCoinType = ctx.message.text;
+		await ctx.reply(
+			"Enter the amount to swap and the minimum amount to receive, separated by space (e.g., '1000 900'):",
+		);
+	});
+
+	bot.hears(/^\d+\s\d+$/, async (ctx) => {
+		const [inputCoinAmount, minReceived] = ctx.message.text.split(" ");
+		if (!inputCoinAmount || !minReceived) {
+			return ctx.reply("Invalid command format. Usage: <inputCoinAmount> <minReceived>");
+		}
+		ctx.session.inputCoinAmount = inputCoinAmount;
+		ctx.session.minReceived = minReceived;
+
+		const confirmationMessage = `Confirm swap:\n- Pool: ${ctx.session.pool.tokenXType} - ${ctx.session.pool.tokenYType}\n- Type: ${ctx.session.inputCoinType}\n- Amount: ${inputCoinAmount}\n- Min Received: ${minReceived}`;
+		await ctx.reply(
+			confirmationMessage,
+			Markup.inlineKeyboard([
+				Markup.button.callback("Confirm Swap", "confirm_swap"),
+				Markup.button.callback("Cancel", "cancel_swap"),
+			]),
+		);
+	});
+
+	bot.action("confirm_swap", async (ctx) => {
+		if (
+			// @ts-ignore
+			!ctx.session.pool ||
+			// @ts-ignore
+			!ctx.session.inputCoinType ||
+			// @ts-ignore
+			!ctx.session.inputCoinAmount ||
+			// @ts-ignore
+			!ctx.session.minReceived
+		) {
+			return ctx.reply("Session expired or invalid. Please start over.");
+		}
+		const txb = new TransactionBlock(); // Placeholder for transaction block handling
+		// const txb = "hjsjkbjhsaikjmds"; // Placeholder for transaction block handling
+
+		const dex = new Dex("https://fullnode.mainnet.sui.io:443");
+		const result = await kriyaSDK.swap(
+			// @ts-ignore
+			ctx?.session.pool,
+			// @ts-ignore
+			ctx.session.inputCoinType,
+			// @ts-ignore
+			ctx.session.inputCoinAmount,
+			// @ts-ignore
+			ctx.session.inputCoinType === "tokenX" ? ctx.session.pool.tokenX : ctx.session.pool.tokenY,
+			// @ts-ignore
+			ctx.session.minReceived,
+			txb,
+		);
+
+		if (result) {
+			ctx.reply(`Swap successful! Transaction ID: ${result.message}`);
+		} else {
+			ctx.reply("Swap failed. Please try again.");
+		}
+		// Clear session after operation
+		// @ts-ignore
+		delete ctx.session.pool;
+		// @ts-ignore
+		delete ctx.session.inputCoinType;
+		// @ts-ignore
+		delete ctx.session.inputCoinAmount;
+		// @ts-ignore
+		delete ctx.session.minReceived;
+	});
+
+	bot.action("cancel_swap", async (ctx) => {
+		await ctx.reply("Swap cancelled.");
+		// Clear session
+		// @ts-ignore
+		delete ctx.session.pool;
+		// @ts-ignore
+		delete ctx.session.inputCoinType;
+		// @ts-ignore
+		delete ctx.session.inputCoinAmount;
+		// @ts-ignore
+		delete ctx.session.minReceived;
 	});
 };
 
