@@ -6,7 +6,7 @@ Bot: [Telegram](https://telegram.me/KriyaDExBot)
 
 ## Demo
 
-work in progress
+Soon
 
 ## Short Description
 
