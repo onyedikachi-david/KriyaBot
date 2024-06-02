@@ -2,7 +2,7 @@
 
 A hack project made during [SUI-Overflow](https://sui-overflow.devfolio.co/) 2024 edition.
 
-Bot: [Telegram](https://telegram.me/KriyaDExBot)
+Bot: [Telegram](https://telegram.me/KriyaDexBot)
 
 ## Demo
 
