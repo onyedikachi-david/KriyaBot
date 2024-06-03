@@ -8,6 +8,38 @@ Bot: [Telegram](https://telegram.me/KriyaDexBot)
 
 Soon
 
+## User flow diagram
+
+```mermaid
+flowchart TD
+    subgraph Telegram Bot
+        A1(User) -->|Interact| A2(Telegram Bot)
+    end
+
+    subgraph Command Processing
+        B1 -->|DeFi Operations| B2(Kriya DEX SDK)
+        B1 -->|Blockchain Queries| B3(Sui.js SDK)
+    end
+
+    subgraph Data Handling
+        C1 -->|Store/Fetch| C2(Firebase Realtime Database)
+        C3 -->|Fetch| C4(Zetta Block API)
+    end
+
+    subgraph Security Check
+        D1 -->|Authenticate| D2(OTPlib 2FA)
+    end
+
+    A2 -->|Send Commands| B1[Process Command]
+    B1 --> C1[Database Interaction]
+    B1 --> D1[Perform 2FA]
+    C1 --> A2[Return Data]
+    B2 --> C1
+    B3 --> C1
+    C3 --> A2
+```
+
+
 ## Short Description
 
 KriyaDexBot is a trustless messaging bot that allows easy interaction with the Kriya finance. The bot generates a wallet for the user for now; zklogin will be implemented in the future.

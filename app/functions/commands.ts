@@ -106,6 +106,7 @@ async function generateWallet() {
 	const vault = await Vault.fromMnemonic(derivationHdPath(0), mnemonic);
 	const address = vault.getAddress();
 	const pk = vault.getPrivateKey();
+	// vault.key.sign
 	return address;
 }
 
