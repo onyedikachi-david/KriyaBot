@@ -39,6 +39,41 @@ flowchart TD
     C3 --> A2
 ```
 
+## KriyaBot Commands
+
+**General:**
+
+- `/start`: Send a welcome message and initialize user data.
+- `/quit`: Leave the bot and the chat.
+
+**Wallet:**
+
+- `/wallet`: View your wallet address or create a new one.
+- `/portfolio`: View your portfolio balance.
+- `/swap`: Swap tokens between different pools.
+- `/addlp`: Add liquidity to a pool.
+- `/removelp`: Remove liquidity from a pool.
+- `/stake`: Stake tokens to earn rewards.
+- `/deposit`: Deposit tokens into a CLMM vault.
+- `/withdraw`: Withdraw tokens from a CLMM vault.
+
+**2FA:**
+
+- `/2fa`: Set up two-factor authentication for your wallet.
+
+
+**Additional Notes:**
+
+- Some commands require the user to have a wallet set up.
+- The  `/swap`  command is currently in development and may not be fully functional.
+- The bot is still under development and new features may be added in the future.
+
+## Example Usage
+
+- To create a new wallet, send the  `/wallet`  command.
+- To view your portfolio balance, send the  `/portfolio`  command.
+- To swap tokens, send the  `/swap`  command and follow the instructions.
+- To set up two-factor authentication, send the  `/2fa`  command.
 
 ## Short Description
 
